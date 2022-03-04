@@ -138,7 +138,7 @@
   * 의존 관계가 인터페이스 뿐만 아니라 구현체까지 모두 의존하는 문제가 있다
   * MemberServiceImpl 구현체가 MemberRepository 인터페이스와 MemoryMemberRepository 구현체를 모두 의존하고 있다. -> DIP 위반
   
-<h2> 5. 주문과 할인 도메인 개발 </h2>
+<h2> 5. 주문과 할인 도메인 설계 </h2>
 
 * 주문과 할인 정책
   * 회원은 상품을 주문할 수 있다.
@@ -161,4 +161,45 @@
 
 <img src = "/img/스프링12.png" width = "350" height = "170">
 
+<h2> 6. 주문과 할인 도메인 개발 </h2>
 
+* [할인 정책 인터페이스](/src/main/java/hello/core/discount/DiscountPolicy.java)
+* [정액 할인 정책 구현체](/src/main/java/hello/core/discount/FixDiscountPolicy.java)
+* [주문 엔티티](/src/main/java/hello/core/order/Order.java)
+* [주문 서비스 인터페이스](/src/main/java/hello/core/order/OrderService.java)
+* [주문 서비스 구현체](/src/main/java/hello/core/order/OrderServiceImpl.java)
+
+---
+<h2> 1. 새로운 할인 정책 개발 </h2>
+
+* 새로운 할인 정책 추가(RateDiscountPolicy)
+
+<img width="403" alt="스프링13" src="https://user-images.githubusercontent.com/62021242/156767762-f4cf5d77-218d-4ba1-bcfd-bc8c5b121b22.png">
+
+  * [할인 정책 구현체](/src/main/java/hello/core/discount/RateDiscountPolicy.java)
+  
+* 새로운 할인 정책 적용과 문제점
+
+``` JAVA
+public class OrderServiceImpl implements OrderService {
+// private final DiscountPolicy discountPolicy = new FixDiscountPolicy();
+ private final DiscountPolicy discountPolicy = new RateDiscountPolicy();
+}
+```
+
+  * OrderServiceImpl이 DiscountPolicy와 FixDiscountPolicy, RateDiscountPolicy 까지 의존하고 있다. -> DIP 위반
+  * 지금 코드는 기능을 확장하려면 코드를 변경 해야한다 -> 클라이언트 코드에 영향을 준다 -> OCP 위반
+  <img width="405" alt="스프링14" src="https://user-images.githubusercontent.com/62021242/156768847-4259cfca-a424-4ba1-96dd-1e0f8b85518e.png">
+  
+* 해결 방법
+
+ * 인터페이스에만 의존하도록 설계를 변경하자
+
+``` JAVA
+public class OrderServiceImpl implements OrderService {
+ //private final DiscountPolicy discountPolicy = new RateDiscountPolicy();
+ private DiscountPolicy discountPolicy;
+}
+```
+* 하지만 구현체가 없기 때문에 실행이 안된다(Null pointer Exceoption 발생)
+* 해결하려면 OrderServiceImpl에 DiscountPolicy의 구현 객체를 대신 생성하고 주입해주어야 한다.
