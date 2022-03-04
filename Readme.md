@@ -203,3 +203,11 @@ public class OrderServiceImpl implements OrderService {
 ```
 * 하지만 구현체가 없기 때문에 실행이 안된다(Null pointer Exceoption 발생)
 * 해결하려면 OrderServiceImpl에 DiscountPolicy의 구현 객체를 대신 생성하고 주입해주어야 한다.
+
+<h2> 2. 관심사의 분리 </h2>
+
+* 이전 코드는 마치 로미오 역할(인터페이스)을 하는 레오나르도 디카프리오(구현체, 배우)가 줄리엣 역할(인터페이스)을 하는 여자 주인공(구현체, 배우)을 직접 초빙하는 것과 같다. 디카프리오는 공연도 해야하고 동시에 여자 주인공도 공연에 직접 초빙해야 하는 다양한 책임을 가지고 있다.
+
+<h2> 3. AppConfig 등장 </h2>
+
+* [AppConfig](/src/main/java/hello/core/AppConfig.java)는 애플리케이션의 전체 동작 방식을 구성(하기 위해, 구현 객체를 생성하고, 연결하는 책임을 가지는 별도의 설정 클래스
