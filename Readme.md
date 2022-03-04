@@ -16,7 +16,7 @@
     구현 : 인터페이스를 구현한 객체
 ```
 
-<img src = "/img/스프링.png" width = "500px" height = "300px"> <img src = "/img/스프링2.png" width = "500px" height = "300px">
+<img src = "/img/스프링.png" width = "400px" height = "200px"> <img src = "/img/스프링2.png" width = "400px" height = "200px">
 * 다형성 예시1
 
   * 운전자는 자동차 역할이라는 인터페이스를 알고 있기 때문에 차가 바뀌어도 역할을 활용할 수 있다.
@@ -132,7 +132,33 @@
   * 회원 서비스 : MemberServiceImpl
 
 <h2> 4. 회원 도메인 개발 </h2>
+
 * 참고 : HashMap은 동시성 이슈가 발생할 수 있다. 이런 경우 ConcurrentHashMap을 사용(실무에서 자주 사용)
 * 위 설계의 문제점
   * 의존 관계가 인터페이스 뿐만 아니라 구현체까지 모두 의존하는 문제가 있다
   * MemberServiceImpl 구현체가 MemberRepository 인터페이스와 MemoryMemberRepository 구현체를 모두 의존하고 있다. -> DIP 위반
+  
+<h2> 5. 주문과 할인 도메인 개발 </h2>
+
+* 주문과 할인 정책
+  * 회원은 상품을 주문할 수 있다.
+  * 회원 등급에 따라 할인 정책을 적용할 수 있다.
+  * 할인 정책은 모든 VIP는 1000원을 할인해주는 고정 금액 할인을 적용해달라. (나중에 변경 될 수 있다.)
+  * 할인 정책은 변경 가능성이 높다. 회사의 기본 할인 정책을 아직 정하지 못했고, 오픈 직전까지 고민을 미루고 싶다. 최악의 경우 할인을 적용하지 않을 수 도 있다. (미확정)
+
+<img src = "/img/스프링8.png" width = "350" height = "170">
+<img src = "/img/스프링9.png" width = "420" height = "300"> 
+
+* 구현 객체가 점선 화살표로 인터페이스를 바라보고 있다.
+
+<img src = "/img/스프링10.png" width = "420" height = "300">
+
+* 구현체가 인터페이스에만 의존한다.
+
+<img src = "/img/스프링11.png" width = "350" height = "170">
+
+* 저장소의 구현체가 바뀌어도, 주문 서비스 구현체를 변경할 필요가 없다.
+
+<img src = "/img/스프링12.png" width = "350" height = "170">
+
+
