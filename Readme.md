@@ -211,3 +211,99 @@ public class OrderServiceImpl implements OrderService {
 <h2> 3. AppConfig 등장 </h2>
 
 * [AppConfig](/src/main/java/hello/core/AppConfig.java)는 애플리케이션의 전체 동작 방식을 구성(하기 위해, 구현 객체를 생성하고, 연결하는 책임을 가지는 별도의 설정 클래스
+  * AppConfig는 애플리케이션의 실제 동작에 필요한 구현 객체를 생성한다.
+  * AppConfig는 생성한 객체 인스턴스의 참조를 생성자를 통해서 주입해준다.
+  * 의존관계에 대한 고민은 외부에 맡기고 실행에만 집중하면 된다. [MemberServiceImpl](/src/main/java/hello/core/member/MemberServiceImpl.java)
+    <img width="405" alt="스프링15" src="https://user-images.githubusercontent.com/62021242/156887601-9a3a5ed4-f50f-45f6-a6e4-6da3c3651152.png">
+  * 관심사가 분리되어 객체를 생성하고 연결하는 역할과 실행하는 역할이 명확히 분리되었다. DIP 완성
+  * AppConfig는 memoryMemberRepository 객체를 생성하고 그 참조값을 memberServiceImpl을 생성하면서 생성자로 전달한다.
+ 
+<h2> 4. 좋은 객체 지향 설계의 5자기 원칙의 적용 </h2>
+
+* SRP 단일 책임 원칙 - 한 클래스는 하나의 책임만 가져야 한다.
+  * 구현 객체를 생성하고 연결하는 책임은 AppConfig가 담당
+  * 클라이언트 객체는 실행하는 책임만 담당
+
+* DIP 의존관계 역전 원칙 - 추상화에 의존해야지 구체화에 의존하면 안된다.
+  * 클라이언트 코드(OrderServiceImple)는 DIP를 지키며 DiscountPolicy 추상화 인터페이스에 의존하는 것 같지만, FixDiscountPolicy 구체화 구현 클래스에도 함께 의존했다.
+  * 클라이언트 코드가 DiscountPolicy 추상화 인터페이스에만 의존하도록 코드를 변경하고 AppConfig가 FixDiscountPolicy 객체 인스턴스를 클라이언트 코드 대신 생성해서 클라이언트 코드에 의존관계를 주입하면서 DIP원칙을 해결했다.
+
+* OCP - 소프트웨어 요소는 확장에는 열려있으나 변경에는 닫혀 있어야 한다.
+  * 애플리케이션을 사용 영역과 구성 영역으로 나눔
+  * AppConfig가 의존관계를 FixDiscountPolicy RateDiscountPolicy 로 변경해서 클라이언트 코드에 주입하므로 클라이언트 코드는 변경하지 않아도 됨
+  * 소프트웨어 요소를 새롭게 확장해도 사용 영역의 변경은 닫혀 있다.
+
+---
+
+<h2> 1. IoC, DI, 그리고  </h2>
+
+* 제어의 역전
+  * 기존 프로그램 : 클라이언트 구현 객체가 스스로 필요한 서버 구현 객체를 생성하고, 연결하고, 실행했다. 구현 객체가 프로그램의 제어 흐름을 스스로 조종
+  * AppConfig : 구현 객체는 자신의 로직을 실행하는 역할만 담당. 외부에서  프로그램 동장 방식을 제어한다.
+    * 프로그램에 대한 제어 흐름에 대한 권한은 모두 AppConfig가 가지고 있다. 어떤 인터페이스에 어떤 구현체를 선택할지도 정해준다.
+
+```
+프로그램의 제어 흐름을 직접 제어하는 것이 아니라 외부에서 관리하는 것을 제어의 역전(IoC)라고 한다.
+```
+
+* 의존과계 주입 DI
+  * 의존관계는 정적인 클래스 의존 관계와, 실행 시점에 결정되는 동적인 객체(인스턴스) 의존 관계 둘을 분리해서 생각해야 한다.
+    * 정적인 클래스 의존관계
+      * 클래스가 사용하는 import 코드만 보고 의존관계를 쉽게 판단할 수 있다.
+        <img width="406" alt="스프링16" src="https://user-images.githubusercontent.com/62021242/156892578-1d07b174-e4fc-48fe-a10b-af2420701711.png">
+      * OrderServiceImpl은 MemberRepository와 DiscountPolicy 에 의존한다는 것을 알 수 있다. 그런데 이러한 클래스 의존관계 만으로는 실제 어떤 객체가 OrderServiceImpl 에 주입 될지 알 수 없다
+    * 동적인 객체 인스턴스 의존 관계
+      * 애플리케이션 실행 시점에 실제 생성된 객체 인스턴스의 참조가 연결된 의존 관계다.
+        <img width="404" alt="스프링17" src="https://user-images.githubusercontent.com/62021242/156892763-272c0527-c3f2-4726-843e-3fe730df70aa.png">
+      * 애플리케이션 실행 시점에 외부에서 실제 구현 객체를 생성하고 클라이언트에 전달해서 클라이언트와 서버의 실제 의존관계가 연결 되는 것을 __의존관계 주입__ 이라 한다.
+      * AppConfig가 그 역할을 한다.(Appconfig = DI 컨테이너)
+    * 의존관계 주입을 사용하면 정적인 클래스 의존관계를 변경하지 않고, 동적인 객체 인스턴스 의존관계를 쉽게 변경할 수 있다.
+
+<h2> 2. 스프링으로 전환하기  </h2>
+
+* @Configuration : AppConfig에 설정을 구성한다는 뜻
+* @Bean : 스프링 빈 등록한다.
+
+``` JAVA
+public class MemberApp {
+ public static void main(String[] args) {
+// AppConfig appConfig = new AppConfig();
+// MemberService memberService = appConfig.memberService();
+ ApplicationContext applicationContext = new AnnotationConfigApplicationContext(AppConfig.class);
+ MemberService memberService = applicationContext.getBean("memberService", MemberService.class);
+ Member member = new Member(1L, "memberA", Grade.VIP);
+ memberService.join(member);
+ Member findMember = memberService.findMember(1L);
+ System.out.println("new member = " + member.getName());
+ System.out.println("find Member = " + findMember.getName());
+ }
+ ```
+ 
+ * ApplicationContext를 스프링 컨테이너라 한다. 스프링 컨테이너는 @Configuration이 붙은 AppConfig를 설정 정보로 사용한다. @Bean이라 적힌 메서드를 모두 호출해서 반환된 객체를 스프링 컨데이터에 등록한다.
+ * 스프링 빈은 @Bean이 붙은 메서드의 명을 스프링 빈의 이름으로 사용한다.
+ * 스프링 빈은 applicationContext.getBean() 메서드를 사용해서 찾을 수 있다
+
+---
+
+<h2> 1. 스프링 컨테이너 생성  </h2>
+
+``` JAVA
+ApplicationContext applicationContext = new AnnotationConfigApplicationContext(AppConfig.class);
+```
+
+* ApplicationContext를 스프링 컨테이너라 한다.
+* ApplicationContext는 인터페이스이다.
+* new AnnotationConfigApplicationContext(AppConfig.class); 클래스는 ApplicationContext인터페이스의 구현체이다.
+
+* 스프링 컨테이너의 생성 과정
+  1. 스프링 컨테이너를 생성 할 때에는 구성 정보(Appconfig.java)를 정해줘야한다.
+       <img width="453" alt="스프링18" src="https://user-images.githubusercontent.com/62021242/156893583-e9c55498-1b62-4568-af38-c3d11c3343e4.png">
+  2. 스프링 컨테이너는 파라미터로 넘어온 설정 클래스 정보를 사용해서 스프링 빈을 등록한다.
+       <img width="453" alt="스프링19" src="https://user-images.githubusercontent.com/62021242/156893635-36a67231-3d78-4638-a73a-f7c93bf7c1cb.png">
+     * 빈 이름은 항상 다른 이름을 부여해하 한다.(@Bean(name = "memberService2")) 직접 부여 방법
+  3. 스프링 빈 의존관계 설정 준비
+     * AppConfig 기반으로 스프링 컨테이너를 생성한다.
+      <img width="452" alt="스프링20" src="https://user-images.githubusercontent.com/62021242/156893717-b5573d77-4dc3-407f-8447-3b0c9a48e785.png">
+  4. 스프링 빈 의존관계 설정
+     * 스프링 컨테이너가 설정 정보를 참고해서 의존관계를 주입한다.
+      <img width="452" alt="스프링21" src="https://user-images.githubusercontent.com/62021242/156893760-b66d7322-dd25-4394-a3a3-d02666b9cd3f.png">
