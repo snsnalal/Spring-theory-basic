@@ -307,3 +307,402 @@ ApplicationContext applicationContext = new AnnotationConfigApplicationContext(A
   4. 스프링 빈 의존관계 설정
      * 스프링 컨테이너가 설정 정보를 참고해서 의존관계를 주입한다.
       <img width="452" alt="스프링21" src="https://user-images.githubusercontent.com/62021242/156893760-b66d7322-dd25-4394-a3a3-d02666b9cd3f.png">
+
+<h2> 2. 스프링 빈 조회  </h2>
+
+``` JAVA
+ @Test
+ @DisplayName("애플리케이션 빈 출력하기")
+ void findApplicationBean() {
+    String[] beanDefinitionNames = ac.getBeanDefinitionNames();
+    for (String beanDefinitionName : beanDefinitionNames) {
+        BeanDefinition beanDefinition = ac.getBeanDefinition(beanDefinitionName);
+         //Role ROLE_APPLICATION: 직접 등록한 애플리케이션 빈
+        //Role ROLE_INFRASTRUCTURE: 스프링이 내부에서 사용하는 빈
+        if (beanDefinition.getRole() == BeanDefinition.ROLE_APPLICATION) {
+            Object bean = ac.getBean(beanDefinitionName);
+            System.out.println("name=" + beanDefinitionName + " object=" + bean);
+        }
+     }
+ }
+ ```
+ 
+ * ac.getBeanDefinitionNames() : 스프링에 등록된 모든 빈 이름을 조회한다.
+ * ac.getBean() : 빈 이름으로 빈 객체(인스턴스)를 조회한다.
+ * 동일한 타입이 둘 이상
+   * 빈 이름을 지정해야한다.
+   * ac.getBeansOfType() 을 사용하면 해당 타입의 모든 빈을 조회할 수 있다.
+
+``` JAVA
+ @Test
+ @DisplayName("타입으로 조회시 같은 타입이 둘 이상 있으면, 빈 이름을 지정하면 된다")
+ void findBeanByName() {
+    MemberRepository memberRepository = ac.getBean("memberRepository1", MemberRepository.class);
+    assertThat(memberRepository).isInstanceOf(MemberRepository.class);
+ }
+ ```
+ 
+ ```JAVA
+ @Test
+ @DisplayName("특정 타입을 모두 조회하기")
+ void findAllBeanByType() {
+    Map<String, MemberRepository> beansOfType = ac.getBeansOfType(MemberRepository.class);
+    for (String key : beansOfType.keySet()) {
+      System.out.println("key = " + key + " value = " + beansOfType.get(key));
+    }
+    System.out.println("beansOfType = " + beansOfType);
+    assertThat(beansOfType.size()).isEqualTo(2);
+ }
+ ```
+  * 상속 관계
+    * 부모 타입으로 조회하면, 자식 타입도 함께 조회한다.
+    * 그래서 모든 자바 객체의 최고 부모인 Object 타입으로 조회하면, 모든 스피링 빈을 조회한다.
+    
+ ```JAVA
+ @Test
+ @DisplayName("부모 타입으로 조회시, 자식이 둘 이상 있으면, 중복 오류가 발생한다")
+ void findBeanByParentTypeDuplicate() {
+    //DiscountPolicy bean = ac.getBean(DiscountPolicy.class);
+    assertThrows(NoUniqueBeanDefinitionException.class, () -> c.getBean(DiscountPolicy.class));
+ }
+ 
+ @Test
+ @DisplayName("부모 타입으로 조회시, 자식이 둘 이상 있으면, 빈 이름을 지정하면 된다")
+ void findBeanByParentTypeBeanName() {
+    DiscountPolicy rateDiscountPolicy = ac.getBean("rateDiscountPolicy", iscountPolicy.class);
+    assertThat(rateDiscountPolicy).isInstanceOf(RateDiscountPolicy.class);
+ }
+ 
+ @Test
+ @DisplayName("특정 하위 타입으로 조회")
+ void findBeanBySubType() {
+    RateDiscountPolicy bean = ac.getBean(RateDiscountPolicy.class);
+    assertThat(bean).isInstanceOf(RateDiscountPolicy.class);
+ }
+ 
+ @Test
+ @DisplayName("부모 타입으로 모두 조회하기")
+ void findAllBeanByParentType() {
+    Map<String, DiscountPolicy> beansOfType = ac.getBeansOfType(DiscountPolicy.class);
+    assertThat(beansOfType.size()).isEqualTo(2);
+    for (String key : beansOfType.keySet()) {
+      System.out.println("key = " + key + " value=" + beansOfType.get(key));
+    }
+ }
+ 
+ @Test
+ @DisplayName("부모 타입으로 모두 조회하기 - Object")
+ void findAllBeanByObjectType() {
+    Map<String, Object> beansOfType = ac.getBeansOfType(Object.class);
+    for (String key : beansOfType.keySet()) {
+        System.out.println("key = " + key + " value=" +
+        beansOfType.get(key));
+    }
+ }
+ ```
+  * 실무에서 print로 출력물을 만들면 안된다.
+  * 테스트 통과/실패 여부만 판단하도록 작성하는게 좋다.
+
+ <h2> 3. BeanFactory와 ApplicationContext  </h2>
+ 
+ <img width="401" alt="스프링22" src="https://user-images.githubusercontent.com/62021242/157295030-d20ce4bb-9e80-4fba-ab2c-e8c045f649ce.png">
+ 
+ * BeanFactory
+  * 스프링 컨테이너의 최상위 인터페이스
+  * 빈을 관리하고 조회하는 역할을 담당
+  * getBean()을 제공한다.
+
+* ApplicationContext
+  * BeanFactory 기능을 모두 상속받아서 제공한다.
+ 
+* 둘의 차이
+  * ApplicationContext는 여러 인터페이스를 상속받아서 국제화 기능, 환경변수, 등의 기능을 제공한다.
+  
+  <img width="402" alt="스프링23" src="https://user-images.githubusercontent.com/62021242/157295493-c3fda398-be13-4968-b36b-2473e5389e68.png">
+
+
+---
+
+<h2> 1. 다양한 설정 형식 지원 </h2>
+
+<img width="402" alt="스프링24" src="https://user-images.githubusercontent.com/62021242/157295742-91344ae8-9e9d-47c0-9e8d-5cf3e73c4950.png">
+
+* 지금까지는 AppConfig 팩토리 빈에서 @Bean을 통해 스프링 빈을 스프링 컨테이너에 등록하는 방식을 사용했다.
+
+``` JAVA
+  AnnotationConfigApplicationContext ac = new AnnotationConfigApplicationContext(AppConfig.class)
+```
+
+* xml 설정 방식
+  * GenericXmlApplicationContext를 사용하면서 xml 설정 파일을 넘기면 된다.
+  
+``` JAVA
+  @Test
+ void xmlAppContext() {
+    ApplicationContext ac = new GenericXmlApplicationContext("appConfig.xml");
+ 
+    MemberService memberService = ac.getBean("memberService", MemberService.class);
+    assertThat(memberService).isInstanceOf(MemberService.class);
+ }
+```
+
+  * [appConfig.xml](/src/main/resources/appConfig.xml)
+  * 잘 사용하지 않으므로 알아만 두자
+
+<h2> 2. 스프링 빈 설정 메타 정보 - BeanDefinition </h2>
+
+<img width="405" alt="스프링25" src="https://user-images.githubusercontent.com/62021242/157296906-b3f504be-6b93-45e5-9d32-9f6835fd1499.png">
+
+* BeanDefinition이라는 추상화를 중심으로 다양한 설정 형식을 지원
+* 쉽게 얘기해서 역할과 구현을 개념적으로 나눈 것이다.
+  * XML을 읽어서 BeanDefinition을 만들면 된다.
+  * 자바 코드를 읽어서 BeanDefinition을 만들면 된다.
+  * 스프링 컨테이너는 자바 코드인지, XML인지 몰라도 된다. 오직 BeanDefinition만 알면 된다.
+* BeanDefinition 을 빈 설정 메타정보라 한다.
+  * @Bean , bean 당 각각 하나씩 메타 정보가 생성된다.
+* 스프링 컨테이너는 이 메타정보를 기반으로 스프링 빈을 생성한다
+
+<img width="403" alt="스프링26" src="https://user-images.githubusercontent.com/62021242/157297604-8e746495-214b-476e-83a9-7bcb5ee095e3.png">
+
+---
+
+<h2> 1. 웹 애플리케이션과 싱글톤 컨테이너 </h2>
+
+* 싱글톤 패턴
+  * 클래스의 인스턴스가 딱 1개만 생성되는 것을 보장하는 디자인 패턴이다.
+  * 객체 인스턴스가 2개 이상 생성하지 못하도록 막아야 한다.
+    * private 생성자를 사용해서 외부에서 임의로 new 키워드 사용하지 못하도록 막아야 한다.
+   
+``` JAVA
+//1. static 영역에 객체를 딱 1개만 생성해둔다.
+ private static final SingletonService instance = new SingletonService();
+ //2. public으로 열어서 객체 인스터스가 필요하면 이 static 메서드를 통해서만 조회하도록 허용한다.
+ public static SingletonService getInstance() {
+    return instance;
+ }
+ //3. 생성자를 private으로 선언해서 외부에서 new 키워드를 사용한 객체 생성을 못하게 막는다.
+ private SingletonService() {
+ }
+ public void logic() {
+    System.out.println("싱글톤 객체 로직 호출");
+ }
+ ```
+ 
+* 1. static 영역에 객체 instance를 미리 하나 생성해서 올려둔다.
+* 2. 이 객체 인스턴스가 필요하면 오직 getInstance() 메서드를 통해서만 조회할 수 있다. 이 메서드를 호출하면 항상 같은 인스턴스를 반환한다.
+* 3. 딱 1개의 객체 인스턴스만 존재해야 하므로, 생성자를 private으로 막아서 혹시라도 외부에서 new 키워드로 객체 인스턴스가 생성되는 것을 막는다.
+
+``` JAVA
+@Test
+@DisplayName("싱글톤 패턴을 적용한 객체 사용")
+public void singletonServiceTest() {
+ //private으로 생성자를 막아두었다. 컴파일 오류가 발생한다.
+ //new SingletonService();
+ //1. 조회: 호출할 때 마다 같은 객체를 반환
+ SingletonService singletonService1 = SingletonService.getInstance();
+ 
+ //2. 조회: 호출할 때 마다 같은 객체를 반환
+ SingletonService singletonService2 = SingletonService.getInstance();
+ 
+ //참조값이 같은 것을 확인
+ System.out.println("singletonService1 = " + singletonService1);
+ System.out.println("singletonService2 = " + singletonService2);
+ 
+ // singletonService1 == singletonService2
+ assertThat(singletonService1).isSameAs(singletonService2);
+ singletonService1.logic();
+}
+```
+
+* private으로 new 차단
+* 호출할 때마다 같은 객체 인스턴스 반환 확인 가능
+* 싱글턴 패턴의 문제점
+  * 싱글톤 패턴을 구현하는 코드 자체가 많이 들어간다.
+  * 의존관계상 클라이언트가 구체 클래스에 의존한다. DIP를 위반한다.
+  * 클라이언트가 구체 클래스에 의존해서 OCP 원칙을 위반할 가능성이 높다.
+  * 테스트하기 어렵다.
+  * 내부 속성을 변경하거나 초기화 하기 어렵다.
+  * private 생성자로 자식 클래스를 만들기 어렵다.
+  * 결론적으로 유연성이 떨어진다.
+  * 안티패턴으로 불리기도 한다.
+
+<h2> 2. 싱글톤 컨테이너 </h2>
+
+* 스프링 컨테이너는 싱글톤 패턴의 문제점을 해결하면서, 싱글턴 패턴을 적용하지 않아도, 객체 인스턴스를 싱글톤으로 관리한다.
+* 스프링 컨테이너는 싱글톤 컨테이너의 역할을 한다. 싱글톤 객체를 생성하고 관리하는 기능을 싱글톤 레지스트리라 한다.
+* 스프링 컨테이너를 사용하는 테스트 코드
+
+``` JAVA
+@Test
+@DisplayName("스프링 컨테이너와 싱글톤")
+void springContainer() {
+ ApplicationContext ac = new
+AnnotationConfigApplicationContext(AppConfig.class);
+ //1. 조회: 호출할 때 마다 같은 객체를 반환
+ MemberService memberService1 = ac.getBean("memberService",
+MemberService.class);
+ //2. 조회: 호출할 때 마다 같은 객체를 반환
+ MemberService memberService2 = ac.getBean("memberService",
+MemberService.class);
+ //참조값이 같은 것을 확인
+ System.out.println("memberService1 = " + memberService1);
+ System.out.println("memberService2 = " + memberService2);
+ //memberService1 == memberService2
+ assertThat(memberService1).isSameAs(memberService2);
+}
+```
+
+* 싱글톤 컨테이너 적용 후
+
+<img width="304" alt="스프링28" src="https://user-images.githubusercontent.com/62021242/157299688-7ffad51a-7279-43ac-af09-5aeae156b430.png">
+
+* 이미 만들어진 객체를 공유해서 효율적으로 재사용할 수 있다.
+* 싱글톤 방식의 주의점
+  * 싱글톤 패턴이든, 스프링 같은 싱글톤 컨테이너를 사용하든, 객체 인스턴스를 하나만 생성해서 공유하는 싱글톤 방식은 여러 클라이언트가 하나의 같은 객체 인스턴스를 공유하기 때문에 싱글톤 객체는 상태를 유지(stateful)하게 설계하면 안된다. 
+  * 무상태(stateless)로 설계해야 한다!
+    * 특정 클라이언트에 의존적인 필드가 있으면 안된다.
+    * 특정 클라이언트가 값을 변경할 수 있는 필드가 있으면 안된다!
+    * 가급적 읽기만 가능해야 한다.
+    * 필드 대신에 자바에서 공유되지 않는, 지역변수, 파라미터, ThreadLocal 등을 사용해야 한다.
+* 스프링 빈의 필드에 공유 값을 설정하면 정말 큰 장애가 발생할 수 있다!!!
+
+* 상태를 유지할 경우 발생하는 문제점 예시
+
+```JAVA
+
+ private int price; //상태를 유지하는 필드
+ 
+ public void order(String name, int price) {
+    System.out.println("name = " + name + " price = " + price);
+    this.price = price; //여기가 문제!
+ }
+ public int getPrice() {
+     return price;
+ }
+```
+
+```JAVA
+
+@Test
+ void statefulServiceSingleton() {
+    ApplicationContext ac = new AnnotationConfigApplicationContext(TestConfig.class);
+    StatefulService statefulService1 = ac.getBean("statefulService", StatefulService.class);
+    StatefulService statefulService2 = ac.getBean("statefulService", StatefulService.class);
+    
+    //ThreadA: A사용자 10000원 주문
+    statefulService1.order("userA", 10000);
+    //ThreadB: B사용자 20000원 주문
+    statefulService2.order("userB", 20000);
+ 
+    //ThreadA: 사용자A 주문 금액 조회
+    int price = statefulService1.getPrice();
+    //ThreadA: 사용자A는 10000원을 기대했지만, 기대와 다르게 20000원 출력
+    System.out.println("price = " + price);
+    Assertions.assertThat(statefulService1.getPrice()).isEqualTo(20000);
+ }
+ 
+ static class TestConfig {
+    @Bean
+    public StatefulService statefulService() {
+      return new StatefulService();
+    }
+}
+ ```
+ 
+ * A사용자가 10000원 B사용자가 20000원 어치 주문할때 A의 주문금액이 20000원으로 나온다
+ * StateSevice는 싱글톤 빈이니까 stateService1과 stateService2는 같은 객체이다.
+ * 하나의 price 변수에 ThreadA와 ThreadB가 접근해서 값을 변경한 것이다.
+ * 무상태로 바꾸기 위해서 공유되지 않는 지역변수, 파라미터, ThreadLocal등을 쓰자.
+ * 금액을 return 값으로 넘기자.
+
+``` JAVA
+//private int price; //상태 유지 필드
+
+    public int order(String name, int price)
+    {
+        System.out.println("name = " + name + " price = " + price);
+        //this.price = price; //여기가 문제
+
+        return price;
+    }
+
+    /*
+    public int getPrice()
+    {
+        //return price;
+    }
+    */
+```
+
+<h2> 3. Configuration과 싱글톤 </h2>
+
+``` JAVA
+@Configuration
+public class AppConfig {
+ @Bean
+ public MemberService memberService() {
+ return new MemberServiceImpl(memberRepository());
+ }
+ @Bean
+ public OrderService orderService() {
+ return new OrderServiceImpl(
+ memberRepository(),
+ discountPolicy());
+ }
+ @Bean
+ public MemberRepository memberRepository() {
+ return new MemoryMemberRepository();
+ }
+ ...
+}
+```
+
+* memberService 빈을 만드는 코드를 보면 memberRepository()를 호출한다.
+  * 이 메서드를 호출하면 new MemoryMemberRepository()를 호출한다.
+* orderService 빈을 만드는 코드로 동일하게 memberRepository()를 호출한다.
+  * 이 메서드를 호출하면 new MemoryMemberRepository()를 호출한다.
+* MemoryMemberRepository가 2개 생성되면서 글톤이 깨지는 것 처럼 보인다. 하지만 확인해보면 MemoryMemberRepository 인스턴스는 모두 같은 인스턴스가 공유되어 사용된다.
+
+``` JAVA
+@Test
+ void configurationTest() {
+    ApplicationContext ac = new AnnotationConfigApplicationContext(AppConfig.class);
+    
+    MemberServiceImpl memberService = ac.getBean("memberService", MemberServiceImpl.class);
+    OrderServiceImpl orderService = ac.getBean("orderService", OrderServiceImpl.class);
+    MemberRepository memberRepository = ac.getBean("memberRepository", MemberRepository.class);
+    
+    //모두 같은 인스턴스를 참고하고 있다.
+    System.out.println("memberService -> memberRepository = " + memberService.getMemberRepository());
+    System.out.println("orderService -> memberRepository = " + orderService.getMemberRepository());
+    System.out.println("memberRepository = " + memberRepository);
+    
+    //모두 같은 인스턴스를 참고하고 있다.
+    assertThat(memberService.getMemberRepository()).isSameAs(memberRepository);
+    assertThat(orderService.getMemberRepository()).isSameAs(memberRepository);
+ }
+```
+
+* [appConfig](/src/main/java/hello/core/AppConfig.java)에서 보게되면 memberRepository()는 3번 호출되는 것 같지만 확인해보면 모두 1번만 호출된다.
+
+<h2> 4. @Configuration과 바이트코드 </h2>
+
+* 스프링 컨테이너는 싱글톤 레지스트리다. 따라서 스프링 빈이 싱글톤이 되도록 보장해주어야 한다. 그런데 스프링이 자바 코드까지 어떻게 하기는 어렵다. 저 자바 코드를 보면 분명 3번 호출되어야 하는 것이 맞다. 그래서 스프링은 클래스의 바이트코드를 조작하는 라이브러리를 사용한다.
+
+``` JAVA
+@Test
+void configurationDeep() {
+ ApplicationContext ac = new
+AnnotationConfigApplicationContext(AppConfig.class);
+ //AppConfig도 스프링 빈으로 등록된다.
+ AppConfig bean = ac.getBean(AppConfig.class);
+ 
+ System.out.println("bean = " + bean.getClass());
+ //출력: bean = class hello.core.AppConfig$$EnhancerBySpringCGLIB$$bd479d70
+}
+```
+
+* 순수한 클래스라면 class hello.core.AppConfig가 출력되어야 하겟지만, @Configuration을 적용한 AppConfig는 CGLIB라는 바이트 코드 조작 라이브러리를 사용해서 AppConfig 클래스를 상속받은 임의의 다른 클래스를 만들고, 그 다른 클래시를 스피링 빈으로 등록한다.
+
+<img width="402" alt="스프링29" src="https://user-images.githubusercontent.com/62021242/157302838-4b4b0db0-b2f0-44c8-978f-f44ca470ac3f.png">
+
