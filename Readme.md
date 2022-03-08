@@ -702,7 +702,149 @@ AnnotationConfigApplicationContext(AppConfig.class);
 }
 ```
 
-* 순수한 클래스라면 class hello.core.AppConfig가 출력되어야 하겟지만, @Configuration을 적용한 AppConfig는 CGLIB라는 바이트 코드 조작 라이브러리를 사용해서 AppConfig 클래스를 상속받은 임의의 다른 클래스를 만들고, 그 다른 클래시를 스피링 빈으로 등록한다.
+* 순수한 클래스라면 class hello.core.AppConfig가 출력되어야 하겟지만, @Configuration을 적용한 AppConfig는 CGLIB라는 바이트 코드 조작 라이브러리를 사용해서 AppConfig 클래스를 상속받은 임의의 다른 클래스를 만들고, 그 다른 클래스를 스프링 빈으로 등록한다.
 
 <img width="402" alt="스프링29" src="https://user-images.githubusercontent.com/62021242/157302838-4b4b0db0-b2f0-44c8-978f-f44ca470ac3f.png">
 
+* 그 임의의 다른 클래스가 바로 싱글톤이 보장되도록 해준다.
+* @Bean이 붙은 메서드 마다 이미 스프링 빈이 존재하면 존재하는 빈을 반환하고, 스프링 빈이 없으면 생성해서 스프링 빈으로 등록하고 반환하는 코드가 동적으로 만들어진다.
+* @Bean만 사용시 싱글톤을 보장하지 않는다.
+
+---
+
+<h2> 1. 컴포넌트 스캔과 의존관계 자동 주입 </h2>
+
+* 스프링에서는 스프링 설정 정보 없이도 자동으로 스프링 빈을 등록하는 컴포넌트 스캔이라느 기능을 재공한다.
+* 의존관계도 자동으로 주입하는 @Autowired라는 기능도 제공한다.
+
+``` JAVA
+@Configuration
+@ComponentScan(
+ excludeFilters = @Filter(type = FilterType.ANNOTATION, classes =
+Configuration.class))
+public class AutoAppConfig {
+ 
+}
+```
+
+* 컴포넌트 스캔을 사용하려면 @ComponentScan을 설정 정보에 붙여주면 된다.
+* 컴포넌트 스캔을 사용하면 @Configuration이 붙은 설정 정보도 자동으로 등록되기 때문에 AppConfig, TestConfig 등 앞서 만들어두었던 설정 정보도 함께 등록되고, 실행되어 버린다. 그래서 excludeFilters 를 이용해서 설정정보는 컴포넌트 스캔 대상에서 제외했다. 보통 설정 정보를 컴포넌트 스캔 대상에서 제외하지는 않지만, 기존 예제 코드를 최대한 남기고 유지하기 위해서 이 방법을 선택했다.
+* Component가 붙은 클래스를 스캔해서 스프링 빈으로 등록한다.
+
+``` JAVA
+@Component
+public class MemoryMemberRepository implements MemberRepository {}
+
+@Component
+public class RateDiscountPolicy implements DiscountPolicy {}
+
+@Component
+public class MemberServiceImpl implements MemberService {
+ private final MemberRepository memberRepository;
+ @Autowired
+ public MemberServiceImpl(MemberRepository memberRepository) {
+ this.memberRepository = memberRepository;
+ }
+}
+```
+
+* @Autowired를 붙여서 자동으로 의존관계를 주입한다.
+
+* 컴포넌트 스캔과 자동 의존관계 주입의 동작 방법
+
+    <img width="404" alt="스프링30" src="https://user-images.githubusercontent.com/62021242/157309255-c77437e6-9a8a-4b70-9b11-9e82a35dbe70.png">
+    
+    * @ComponentScan은 @Component가 붙은 모든 클래시를 스프링 빈으로 등록한다.
+    * 스프링 빈의 기본 이름은 클래스명을 사용하되 맨 앞글자만 소문자를 사용한다.
+      * MemberServiceImpl -> memberServiceImpl
+      * @Component("memberService2") 직접 지정 방식
+
+     <img width="404" alt="스프링31" src="https://user-images.githubusercontent.com/62021242/157309652-178cc0a7-8e85-4bab-a465-9d96def26a24.png">
+     
+    * 생성자에 @Autowired를 지정하면, 스프링 컨테이너가 자동으로 해당 스프링 빈을 찾아서 주입한다.
+    * 기본 조회 전략은 타입이 같은 빈을 찾아서 주입한다.
+      * getBean(MemberRepository.class)와 동일하다고 이해
+
+    
+<h2> 2. 탐색 위치와 기본 스캔 대상 </h2>
+
+* 탐색 시작 위치를 지정할 수 있다.
+
+``` JAVA
+@ComponentScan(
+ basePackages = "hello.core",
+}
+```
+
+* basePackages로 패키지의 시작 위치를 지정한다. {"", ""} 여러 시작 위치를 지정할 수도 있다.
+* basePackageClasses는 지정한 클래스의 패키지를 탐색 시작 위치로 지정한다.
+* 지정하지 않으면 @ComponentScan이 붙은 클래스의 패키지가 시작 위치
+* 권장하는 방법 : 시작 위치를 지정하지 않고 최상단에 두는 것.
+
+* 컴포넌트 스캔 기본 대상
+  * @Component : 컴포넌트 스캔에 사용
+  * @Controller : 스프링 MVC 컨트롤러에서 사용, MVC 컨트롤러로 인식
+  * @Service : 스프링 비지니스 로직에서 사용, 개발자들이 핵심 비즈니스 로직이 여기에 있겟구나 라고 인식에 도움을 준다
+  * @Repository : 스프링 데이터 접근 계층에서 사용, 스프링 데이터 접근 계층으로 인식하고, 데이터 계층의 예외를 스프링 예외로 변환해준다.
+  * @Configuration : 스프링 설정 정보에서 사용, 스프링 설정 정보로 인식하고, 스프링 빈이 싱글톤을 유지하도록 추가 처리를 한다.
+
+<h2> 3. 필터 </h2>
+
+* includeFilters : 컴포넌트 스캔 대상을 추가로 지정한다.
+* excludeFilters : 컴포넌스 스캔에서 제외할 대상을 지정한다.
+
+
+* 컴포넌트 스캔 대상에 추가할 애노테이션
+
+``` JAVA
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface MyIncludeComponent {
+}
+```
+* 컴포넌트 스캔 대상에 제외할 애노테이션
+
+```JAVA
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface MyExcludeComponent {
+}
+```
+
+* 컴포넌트 스캔 대상에 추가할 클래스
+
+``` JAVA
+@MyIncludeComponent
+public class BeanA {
+}
+```
+
+* 컴포넌트 스캔 대상에서 제외할 클래스
+
+``` JAVA
+@MyExcludeComponent
+public class BeanB {
+}
+```
+
+* 전체 테스트 코드
+
+``` JAVA
+@Test
+ void filterScan() {
+    ApplicationContext ac = new AnnotationConfigApplicationContext(ComponentFilterAppConfig.class);
+    BeanA beanA = ac.getBean("beanA", BeanA.class);
+    assertThat(beanA).isNotNull();
+    Assertions.assertThrows(NoSuchBeanDefinitionException.class, () -> ac.getBean("beanB", BeanB.class));
+ }
+ @Configuration
+ @ComponentScan(
+ includeFilters = @Filter(type = FilterType.ANNOTATION, classes = MyIncludeComponent.class),
+ excludeFilters = @Filter(type = FilterType.ANNOTATION, classes = MyExcludeComponent.class))
+ static class ComponentFilterAppConfig {
+ }
+ ```
+ 
+ 
